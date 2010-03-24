@@ -1,0 +1,7 @@
+#!/usr/bin/env ruby
+RAKE_SERVER_TASKS_PATH = File.expand_path("../lib/tasks", File.dirname(__FILE__))
+
+args = ["-R#{RAKE_SERVER_TASKS_PATH}"] + ARGV
+exec('rake', args)
+
+# EOF

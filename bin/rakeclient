@@ -1,0 +1,43 @@
+#!/usr/bin/env ruby
+require 'tempfile'
+require 'fileutils'
+
+fifo_path = File.expand_path('rakeserver.fifo')
+status_path = 
+  File.expand_path("rakeserver-status.fifo", File.dirname(fifo_path))
+FileUtils.rm_f(status_path)
+# puts "Creating fifo #{status_path}"
+# system("mkfifo #{status_path}") or 
+#   raise("Failed to create fifo '#{status_path}': #{$?}")
+  puts "Creating temp files for output"
+  Tempfile.open('rakeserver-stdout') do |stdout|
+    Tempfile.open('rakeserver-stderr') do |stderr|
+      stderr.close
+      puts "Opening #{fifo_path}"
+      open(fifo_path, 'a') do |fifo|
+        args = ARGV.dup
+        args << "RS_STDOUT=#{stdout.path}"
+        args << "RS_STDERR=#{stderr.path}"
+        args << "RS_STATUS=#{status_path}"
+        args << "RS_CLIENT_PID=#{$$}"
+        command = args.join(" ")
+        puts "Sending Rake command: '#{command}'"
+        fifo.puts(command)
+        puts "Waiting for response from server"
+      
+      sleep 1 until File.exist?(status_path)
+      result = open(status_path) do |s| s.getc end
+
+      # puts "Opening #{status_path}"
+      # File.open(status_path, 'r') do |status|
+      #   result = status.getc
+      # end
+        case result
+        when ?S then puts "Success!"
+        when ?F then puts "Failed!"
+        else warn "Unrecognized status '#{result}'"
+        end
+      end
+    end
+  end
+
